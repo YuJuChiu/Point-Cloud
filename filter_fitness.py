@@ -13,23 +13,23 @@ def draw_registration_result(source, target, transformation):
     o3d.visualization.draw_geometries([source_temp, target_temp])
 
 def preprocess_point_cloud(pcd, voxel_size):
-    # print(":: Downsample with a voxel size %.3f." % voxel_size)
+
     pcd_down = pcd.voxel_down_sample(voxel_size)
 
     radius_normal = voxel_size * 2
-    # print(":: Estimate normal with search radius %.3f." % radius_normal)
+
     pcd_down.estimate_normals(
         o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal, max_nn=30))
 
     radius_feature = voxel_size * 5
-    # print(":: Compute FPFH feature with search radius %.3f." % radius_feature)
+
     pcd_fpfh = o3d.pipelines.registration.compute_fpfh_feature(
         pcd_down,
         o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
     return pcd_down, pcd_fpfh
 
 def prepare_dataset(voxel_size, PC, MESH):
-    # print(":: Load two point clouds and disturb initial pose.")
+
     source = o3d.io.read_point_cloud(PC)
     target = o3d.io.read_point_cloud(MESH)
     trans_init = np.identity(4)
@@ -37,7 +37,7 @@ def prepare_dataset(voxel_size, PC, MESH):
     trans_init[:3, :3] = r.apply(trans_init[:3, :3])
 
     source.transform(trans_init)
-    # draw_registration_result(source, target, np.identity(4))
+
 
     source_down, source_fpfh = preprocess_point_cloud(source, voxel_size)
     target_down, target_fpfh = preprocess_point_cloud(target, voxel_size)
@@ -48,9 +48,7 @@ def prepare_dataset(voxel_size, PC, MESH):
 def execute_global_registration(source_down, target_down, source_fpfh,
                                 target_fpfh, voxel_size):
     distance_threshold = voxel_size * 1.5
-    # print(":: RANSAC registration on downsampled point clouds.")
-    # print("   Since the downsampling voxel size is %.3f," % voxel_size)
-    # print("   we use a liberal distance threshold %.3f." % distance_threshold)
+
     result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
         source_down, target_down, source_fpfh, target_fpfh, True,
         distance_threshold,
@@ -62,14 +60,11 @@ def execute_global_registration(source_down, target_down, source_fpfh,
     return result
 
 
-# print(result_ransac)
-# draw_registration_result(source_down, target_down, result_ransac.transformation)
+
 
 def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
     distance_threshold = voxel_size * 1.5
-    # print(":: Point-to-plane ICP registration is applied on original point")
-    # print("   clouds to refine the alignment. This time we use a strict")
-    # print("   distance threshold %.3f." % distance_threshold)
+
     o3d.geometry.PointCloud.estimate_normals(source, search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = 0.1, max_nn = 30))
     o3d.geometry.PointCloud.estimate_normals(target, search_param = o3d.geometry.KDTreeSearchParamHybrid( radius = 0.1, max_nn = 30))
     result = o3d.pipelines.registration.registration_icp(
@@ -79,56 +74,50 @@ def refine_registration(source, target, source_fpfh, target_fpfh, voxel_size):
 
 
 
-# draw_registration_result(source, target, result_icp.transformation)
 
 input_path_pc = '/Users/yeelu/desktop/omer_transform/'
 input_path_mesh = '/Users/yeelu/desktop/omer_mesh/'
 output_path = '/Users/yeelu/desktop/omer_fitness_pc/'
 
-# pc_file = os.listdir(input_path_pc)
-# mesh_file = os.listdir(input_path_mesh)
+pc_file = os.listdir(input_path_pc)
+mesh_file = os.listdir(input_path_mesh)
 
-count = 1
-# for pc in pc_file:
-pc = 'udf068a6b-e65b-430b-bc17-611b062e2e34.ply'
-input_pc = input_path_pc + pc
-PC = o3d.io.read_point_cloud(input_pc)
-pc_unvariant = o3d.io.read_point_cloud(input_pc)
 
-input_mesh = input_path_mesh + pc
-MESH = o3d.io.read_point_cloud(input_mesh)
+for pc in pc_file:
+    
+    input_pc = input_path_pc + pc
+    PC = o3d.io.read_point_cloud(input_pc)
+    pc_unvariant = o3d.io.read_point_cloud(input_pc)
 
-# set initial parameters
-voxel_size = 0.05  # means 5cm for this dataset
+    input_mesh = input_path_mesh + pc
+    MESH = o3d.io.read_point_cloud(input_mesh)
 
-# print(":: Load two point clouds and disturb initial pose.")
-# source = o3d.io.read_point_cloud(PC)
-# target = o3d.io.read_point_cloud(MESH)
-trans_init = np.identity(4)
-r = R.from_euler('y', -90, degrees=True)
-trans_init[:3, :3] = r.apply(trans_init[:3, :3])
+    # set initial parameters
+    voxel_size = 0.05  # means 5cm for this dataset
 
-PC.transform(trans_init)
-# draw_registration_result(source, target, np.identity(4))
 
-source_down, source_fpfh = preprocess_point_cloud(PC, voxel_size)
-target_down, target_fpfh = preprocess_point_cloud(MESH, voxel_size)
+    trans_init = np.identity(4)
+    r = R.from_euler('y', -90, degrees=True)
+    trans_init[:3, :3] = r.apply(trans_init[:3, :3])
+
+    PC.transform(trans_init)
+
+    source_down, source_fpfh = preprocess_point_cloud(PC, voxel_size)
+    target_down, target_fpfh = preprocess_point_cloud(MESH, voxel_size)
     
 
-# source, target, source_down, target_down, source_fpfh, target_fpfh = prepare_dataset(voxel_size, PC, MESH)
+    source, target, source_down, target_down, source_fpfh, target_fpfh = prepare_dataset(voxel_size, PC, MESH)
 
-# global registration
-result_ransac = execute_global_registration(source_down, target_down,
+    # global registration
+    result_ransac = execute_global_registration(source_down, target_down,
                                                 source_fpfh, target_fpfh,
                                                 voxel_size)
-# local refinement
-result_icp = refine_registration(PC, MESH, source_fpfh, target_fpfh,
+    # local refinement
+    result_icp = refine_registration(PC, MESH, source_fpfh, target_fpfh,
                                     voxel_size)
 
-print(result_icp.fitness)
+    print(result_icp.fitness)
  
-if (result_icp.fitness > 0.8):
-    output = output_path + pc
-    o3d.io.write_point_cloud(output, pc_unvariant)
-    print('save', count)
-    count += 1
+    if (result_icp.fitness > 0.8):
+        output = output_path + pc
+        o3d.io.write_point_cloud(output, pc_unvariant)
