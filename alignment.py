@@ -3,8 +3,9 @@
 import open3d as o3d
 import numpy as np
 import copy
-# from o3d.geometry import estimate_normals, KDTreeSearchParamHybrid
 
+
+# visualize the alignment
 def draw_registration_result(source, target, transformation):
     source_temp = copy.deepcopy(source)
     target_temp = copy.deepcopy(target)
@@ -15,6 +16,7 @@ def draw_registration_result(source, target, transformation):
 
 
 if __name__ == "__main__":
+    # source and target file to be aligned
     source = o3d.io.read_point_cloud("1b2a8980c17fdd97c897e89b561760b1_4.ply")
     target = o3d.io.read_point_cloud("1b2a8980c17fdd97c897e89b561760b1_5.ply")
     threshold = 0.02
@@ -44,9 +46,7 @@ if __name__ == "__main__":
     reg_p2l = o3d.pipelines.registration.registration_icp(
         source, target, threshold, trans_init, 
         o3d.pipelines.registration.TransformationEstimationPointToPlane())
-    # reg_p2l = o3d.pipelines.registration.registration_icp(
-    #     source, target, threshold, trans_init,
-    #     o3d.pipelines.registration.TransformationEstimationPointToPlane())
+
     print(reg_p2l)
     print("Transformation is:")
     print(reg_p2l.transformation)
